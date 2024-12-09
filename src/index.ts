@@ -1,5 +1,5 @@
 // src/server.ts
-import { PreKeyBundle, ProtocolAddress } from '@signalapp/libsignal-client';
+import { ProtocolAddress } from '@signalapp/libsignal-client';
 import express, { Request, Response } from 'express';
 import {
   InMemoryIdentityKeyStore,
@@ -10,6 +10,8 @@ import {
   SignalProtocolManager,
 } from './protocol';
 import { deserializePreKeyBundle, serializePreKeyBundle } from './protocol/utils';
+import swaggerUi from "swagger-ui-express";
+import swaggerJSDoc from "swagger-jsdoc";
 
 const app = express();
 app.use(express.json());
@@ -56,7 +58,63 @@ async function initializeManager(userId: string): Promise<SignalProtocolManager>
   );
 }
 
-// Register a new user
+const options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Signal Protocol API',
+      version: '1.0.0',
+    },
+  },
+  apis: ['./src/index.ts'], // Path to the files with Swagger docs
+};
+
+const swaggerSpec = swaggerJSDoc(options);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management and protocol initialization.
+ */
+
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Register a new user.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: Unique identifier for the user.
+ *     responses:
+ *       200:
+ *         description: Registration successful, returns pre-key bundle.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userId:
+ *                   type: string
+ *                 preKeyBundle:
+ *                   type: string
+ *       400:
+ *         description: userId is required.
+ *       409:
+ *         description: User already registered.
+ *       500:
+ *         description: Registration failed.
+ */
 app.post('/register', async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
@@ -85,7 +143,36 @@ app.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// Get a user's pre-key bundle
+/**
+ * @swagger
+ * /prekey/{userId}:
+ *   get:
+ *     summary: Retrieve pre-key bundle for a user.
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: User ID to fetch pre-key bundle for.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved pre-key bundle.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userId:
+ *                   type: string
+ *                 preKeyBundle:
+ *                   type: string
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to get PreKey bundle.
+ */
 app.get('/prekey/:userId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -107,7 +194,42 @@ app.get('/prekey/:userId', async (req: Request, res: Response): Promise<void> =>
   }
 });
 
-// Process a pre-key bundle to establish a session
+/**
+ * @swagger
+ * /session:
+ *   post:
+ *     summary: Establish a session using a pre-key bundle.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               recipientId:
+ *                 type: string
+ *               preKeyBundle:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session established successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *       400:
+ *         description: Missing required parameters.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Failed to establish session.
+ */
 app.post('/session', async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, recipientId, preKeyBundle } = req.body;
@@ -138,7 +260,42 @@ app.post('/session', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Send an encrypted message
+/**
+ * @swagger
+ * /send:
+ *   post:
+ *     summary: Send an encrypted message.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               senderId:
+ *                 type: string
+ *               recipientId:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Message encrypted and sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 encryptedMessage:
+ *                   type: string
+ *       400:
+ *         description: Missing required parameters.
+ *       404:
+ *         description: Sender not found.
+ *       500:
+ *         description: Failed to send message.
+ */
 app.post('/send', async (req: Request, res: Response): Promise<void> => {
   try {
     const { senderId, recipientId, message } = req.body;
@@ -166,7 +323,42 @@ app.post('/send', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Receive and decrypt a message
+/**
+ * @swagger
+ * /receive:
+ *   post:
+ *     summary: Receive and decrypt a message.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               recipientId:
+ *                 type: string
+ *               senderId:
+ *                 type: string
+ *               encryptedMessage:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Message decrypted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Missing required parameters.
+ *       404:
+ *         description: Recipient not found.
+ *       500:
+ *         description: Failed to decrypt message.
+ */
 app.post('/receive', async (req: Request, res: Response): Promise<void> => {
   try {
     const { recipientId, senderId, encryptedMessage } = req.body;

@@ -39,14 +39,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy the built files from the build stage
-COPY --from=build /usr/src/app/build ./build
-
-# Copy non-JS/TS files needed for runtime
-COPY --from=build /usr/src/app/public ./public
-COPY --from=build /usr/src/app/views ./views
-
-# Use a non-root user if necessary by uncommenting the next line (assuming user `node` exists in the image)
-# USER node
+COPY --from=build /usr/src/app/dist ./build
 
 # The command to run your app using Node.js
 CMD ["node", "build/index.js"]
