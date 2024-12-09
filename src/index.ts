@@ -1,6 +1,8 @@
 // src/server.ts
 import { ProtocolAddress } from '@signalapp/libsignal-client';
 import express, { Request, Response } from 'express';
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 import {
   InMemoryIdentityKeyStore,
   InMemoryKyberPreKeyStore,
@@ -10,8 +12,6 @@ import {
   SignalProtocolManager,
 } from './protocol';
 import { deserializePreKeyBundle, serializePreKeyBundle } from './protocol/utils';
-import swaggerUi from "swagger-ui-express";
-import swaggerJSDoc from "swagger-jsdoc";
 
 const app = express();
 app.use(express.json());
@@ -66,7 +66,7 @@ const options = {
       version: '1.0.0',
     },
   },
-  apis: ['./src/index.ts'], // Path to the files with Swagger docs
+  apis: ['./src/index.ts'],
 };
 
 const swaggerSpec = swaggerJSDoc(options);
